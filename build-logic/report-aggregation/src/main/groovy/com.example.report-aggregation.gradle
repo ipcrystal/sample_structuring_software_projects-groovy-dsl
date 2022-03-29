@@ -11,7 +11,7 @@ def aggregate = configurations.create('aggregate') {
 }
 
 // Resolvable configuration to resolve the classes of all dependencies
-def classesPath = configurations.create('classesPath') {
+def classPath = configurations.create('classPath') {
     visible = false
     canBeResolved = true
     canBeConsumed = false
@@ -20,6 +20,7 @@ def classesPath = configurations.create('classesPath') {
         attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage, Usage.JAVA_RUNTIME))
         attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category, Category.LIBRARY))
         attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, objects.named(LibraryElements, LibraryElements.CLASSES))
+        attribute(Bundling.BUNDLING_ATTRIBUTE, objects.named(Bundling, Bundling.EXTERNAL))
     }
 }
 
@@ -30,8 +31,9 @@ def sourcesPath = configurations.create('sourcesPath') {
     canBeConsumed = false
     extendsFrom(aggregate)
     attributes {
-        attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category, Category.VERIFICATION))
-        attribute(VerificationType.VERIFICATION_TYPE_ATTRIBUTE, objects.named(VerificationType, VerificationType.MAIN_SOURCES))
+        attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage, Usage.JAVA_RUNTIME))
+        attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category, Category.DOCUMENTATION))
+        attribute(DocsType.DOCS_TYPE_ATTRIBUTE, objects.named(DocsType, 'source-folders'))
     }
 }
 
@@ -42,16 +44,17 @@ def coverageDataPath = configurations.create('coverageDataPath') {
     canBeConsumed = false
     extendsFrom(aggregate)
     attributes {
-        attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category, Category.VERIFICATION))
-        attribute(VerificationType.VERIFICATION_TYPE_ATTRIBUTE, objects.named(VerificationType, VerificationType.JACOCO_RESULTS))
+        attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage, Usage.JAVA_RUNTIME))
+        attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category, Category.DOCUMENTATION))
+        attribute(DocsType.DOCS_TYPE_ATTRIBUTE, objects.named(DocsType, 'jacoco-coverage-data'))
     }
 }
 
 // Register a code coverage report task to generate the aggregated report
 def codeCoverageReport = tasks.register('codeCoverageReport', JacocoReport) {
-    classDirectories.from(classesPath.getIncoming().getFiles())
-    sourceDirectories.from(sourcesPath.getIncoming().artifactView { lenient(true) }.getFiles())
-    executionData(coverageDataPath.getIncoming().artifactView { lenient(true) }.getFiles().filter { it.exists() })
+    additionalClassDirs(classPath.filter { it.isDirectory() })
+    additionalSourceDirs(sourcesPath.incoming.artifactView { lenient(true) }.files)
+    executionData(coverageDataPath.incoming.artifactView { lenient(true) }.files.filter { it.exists() })
 
     reports {
         html.required = true
